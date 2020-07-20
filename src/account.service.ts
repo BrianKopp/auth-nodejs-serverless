@@ -135,7 +135,7 @@ export class AccountService implements IActSvc {
 
     async verifyEmail(emailAddress: string, token: string): Promise<void> {
         // get token
-        await this.dataService.consumeToken(emailAddress, token, 'email'); // TODO error handling
+        await this.dataService.consumeToken(emailAddress, token, 'email');
 
         // update user
         const user = await this.dataService.getUser(emailAddress);
