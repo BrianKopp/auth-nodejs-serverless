@@ -136,7 +136,7 @@ These will be stored as `refreshtoken_${emailAddress}_${token}`.
 
 ```json
 {
-    "id": "refreshtoken_foo@bar.com_foobar",
+    "id": "token_foo@bar.com_foobar",
     "emailAddress": "foo@bar.com",
     "refreshToken": "foobar",
     "expires": 0 // epoch timestamp

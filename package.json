@@ -6,7 +6,9 @@
   "scripts": {
     "build": "tsc",
     "lint": "tsc --noEmit && eslint \"**/*.{js,ts}\" --quiet --fix",
-    "start:local": "ts-node src/index.ts"
+    "start:local": "ts-node src/index.ts",
+    "test": "mocha --require ts-node/register tests/**/*.spec.* --recursive",
+    "test:integration": "mocha --require ts-node/register tests-integration/**/*.spec.* --recursive"
   },
   "repository": {
     "type": "git",
