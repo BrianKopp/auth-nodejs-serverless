@@ -7,13 +7,13 @@ import { AccountService } from './account.service';
 import { makeApp } from './app';
 
 const config = makeFromEnv();
+const formats = [winston.format.timestamp(), winston.format.metadata()];
+if (process.env.ENVIRONMENT !== 'local') {
+    formats.push(winston.format.json());
+}
 const logger = winston.createLogger({
     level: config.logLevel,
-    format: winston.format.combine(
-        winston.format.json(),
-        winston.format.timestamp(),
-        winston.format.metadata()
-    ),
+    format: winston.format.combine(formats),
     transports: new winston.transports.Console()
 });
 logger.debug('auth service booting');

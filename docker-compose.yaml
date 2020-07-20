@@ -1,5 +1,22 @@
 version: '3'
 services:
+  app:
+    build:
+      context: .
+      dockerfile: local.Dockerfile
+    command: npm run start:local
+    volumes:
+      - ./src:/app/src
+    ports:
+      - 3000:3000
+    depends_on:
+      - localstack
+    environment:
+      ENVIRONMENT: local
+      LOG_LEVEL: debug
+      DYNAMO_TABLENAME: local
+      JWT_SECRET: shh
+      WEBHOST: http://localhost:4200
   integrationtests:
     build:
       context: .
@@ -9,12 +26,10 @@ services:
       - ./tests-integration:/app/tests-integration
       - ./tests:/app/tests
       - ./src:/app/src
-    ports:
-      - 3000:3000
     depends_on:
       - localstack
     environment:
-      LOGLEVEL: debug
+      LOG_LEVEL: debug
       DYNAMO_TABLENAME: test
   localstack:
     image: localstack/localstack

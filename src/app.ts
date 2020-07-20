@@ -1,4 +1,4 @@
-import express, { Express } from 'express';
+import express, { Express, Request, Response, NextFunction } from 'express';
 import bodyParser from 'body-parser';
 import { Logger } from 'winston';
 import Joi from '@hapi/joi';
@@ -12,23 +12,25 @@ export const makeApp = (logger: Logger, accountService: m.AccountService): Expre
     
     // health checks
     app.get('/', (_, res) => {
+        logger.silly('liveness check');
         res.send('alive');
     });
     
     app.get('/health', (_, res) => {
+        logger.silly('health check');
         res.send('healthy');
     });
     
     
-    app.post('/auth/account-registration', validator.body(m.registrationJoiObject), (req, res) => {
+    app.post('/auth/account-registration', validator.body(m.registrationJoiObject), async (req, res) => {
         const regData: m.Registration = req.body;
-        console.log('registration data', regData);
+        await accountService.register(regData);
         res.status(201).json({ message: 'created' });
     });
     
-    app.post('/auth/token', validator.body(m.authJoiObject), (req, res) => {
+    app.post('/auth/token', validator.body(m.authJoiObject), async (req, res) => {
         const authData: m.NewTokenRequest = req.body;
-        console.log('new token request', authData);
+        await accountService.getAccessToken(authData);
         res.status(201).json({
             jwt: 'foobar',
             refreshToken: 'blahblah',
@@ -39,9 +41,9 @@ export const makeApp = (logger: Logger, accountService: m.AccountService): Expre
         emailAddress: Joi.string().email().required(),
         refreshToken: Joi.string().required()
     });
-    app.delete('/auth/token', validator.body(logoutModel), (req, res) => {
+    app.delete('/auth/token', validator.body(logoutModel), async (req, res) => {
         const { emailAddress, refreshToken } = req.body;
-        console.log('refresh token', emailAddress, refreshToken);
+        await accountService.logout(emailAddress, refreshToken);
         res.status(204).json({ message: 'logged out' });
     });
     
@@ -49,16 +51,16 @@ export const makeApp = (logger: Logger, accountService: m.AccountService): Expre
         emailAddress: Joi.string().email().required(),
         token: Joi.string().required()
     });
-    app.post('/auth/email-verification', validator.body(emailVerificationModel), (req, res) => {
+    app.post('/auth/email-verification', validator.body(emailVerificationModel), async (req, res) => {
         const { emailAddress, token } = req.body;
-        console.log('email verify', emailAddress, token);
+        await accountService.verifyEmail(emailAddress, token);
         res.status(200).json({ message: 'email verified' });
     });
     
     const emailOnlyVerification = Joi.object({ emailAddress: Joi.string().email().required() });
-    app.post('/auth/password-reset-request', validator.body(emailOnlyVerification), (req, res) => {
+    app.post('/auth/password-reset-request', validator.body(emailOnlyVerification), async (req, res) => {
         const { emailAddress } = req.body;
-        console.log('got request to reset password', emailAddress);
+        await accountService.requestPasswordReset(emailAddress);
         res.status(201).json({ message: 'password reset sent' });
     });
     
@@ -67,10 +69,21 @@ export const makeApp = (logger: Logger, accountService: m.AccountService): Expre
         password: Joi.string().required(), // TODO pattern for strength
         token: Joi.string().required()
     });
-    app.post('/auth/password-reset', validator.body(passwordResetModel), (req, res) => {
+    app.post('/auth/password-reset', validator.body(passwordResetModel), async (req, res) => {
         const { emailAddress, password, token } = req.body;
-        console.log('password reset request', emailAddress, password, token);
+        await accountService.resetPassword(emailAddress, password, token);
         res.json({ message: 'password reset' });
+    });
+
+    // error handling
+    app.use((err: any, req: Request, res: Response, next: NextFunction) => {
+        if (err instanceof m.AuthError) {
+            res.status(err.statusCode).json({ code: err.code, message: err.message });
+            return;
+        }
+
+        logger.error('error in request handler', { url: req.url, error: err });
+        next(err);
     });
 
     return app;
