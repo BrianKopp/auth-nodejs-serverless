@@ -1,5 +1,6 @@
 import { Logger } from 'winston';
 import { randomBytes, pbkdf2 } from 'crypto';
+import * as JWT from 'jsonwebtoken';
 import { Config } from './config';
 import {
     AccountService as IActSvc,
@@ -116,8 +117,12 @@ export class AccountService implements IActSvc {
 
         await this.dataService.setToken(newToken);
         
-        // TODO make JWT
-        const jwt = '';
+        const jwt = JWT.sign({
+            sub: auth.emailAddress,
+            claims: [],
+        }, this.config.jwtSecret, {
+            expiresIn: this.config.ttlAccessToken / 1000
+        });
         return {
             refreshToken: newToken.value,
             jwt
