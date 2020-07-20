@@ -23,13 +23,13 @@ export const makeFromEnv = (): Config => {
         port: Number(process.env.PORT || 3000),
         logLevel: process.env.LOG_LEVEL || 'info',
 
-        awsRegion: process.env.AWS_REGION,
+        awsRegion: process.env.AWS_REGION || 'us-east-1',
         dynamoTableName: process.env.DYNAMO_TABLENAME,
 
         jwtSecret: process.env.JWT_SECRET,
 
-        emailVerifyUrl: `${process.env.WEBHOST}/account/verify-email`,
-        passwordResetUrl: `${process.env.WEBHOST}/account/reset-password`,
+        emailVerifyUrl: `${process.env.WEBHOST}/accounts/verify-email`,
+        passwordResetUrl: `${process.env.WEBHOST}/accounts/reset-password`,
 
         ttlEmailVerification: Number(process.env.EMAIL_VERIFY_TTL || 1000 * 60 * 60 * 24 * 3), // default 3 days
         ttlRefreshToken: Number(process.env.REFRESH_TOKEN_TTL || 1000 * 60 * 60 * 24 * 30), // default 30 days

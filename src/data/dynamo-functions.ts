@@ -108,10 +108,23 @@ export const invalidateTokenIfExists = async (
     }
 };
 
-export const createTableForTesting = async (
+export const createTable = async (
     client: DynamoDB,
-    tableName: string
+    tableName: string,
+    requireNew: boolean
 ): Promise<void> => {
+    try {
+        await client.describeTable({
+            TableName: tableName
+        }).promise();
+        if (requireNew) {
+            throw new Error('table already exists');
+        }
+        return;
+    } catch (err) {
+        // suppress
+    }
+
     await client.createTable({
         TableName: tableName,
         KeySchema: [{ AttributeName: 'id', KeyType: 'HASH' }],

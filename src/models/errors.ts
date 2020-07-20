@@ -8,7 +8,8 @@ export enum AuthErrorTypes {
     UserNotFound = 'UserNotFound',
     EmailAlreadyUsed = 'EmailAlreadyUsed',
     EmailNotVerified = 'EmailNotVerified',
-    InvalidToken = 'InvalidToken'
+    InvalidToken = 'InvalidToken',
+    InvalidPassword = 'InvalidPassword',
 }
 
 const authErrorTypeInfos: {[key: string]: AuthErrorTypeInfo} = {
@@ -32,6 +33,11 @@ const authErrorTypeInfos: {[key: string]: AuthErrorTypeInfo} = {
         message: 'Invalid token',
         statusCode: 400
     },
+    InvalidPassword: {
+        code: 'InvalidPassword',
+        message: 'Invalid password',
+        statusCode: 401
+    }
 };
 
 export class AuthError extends Error {

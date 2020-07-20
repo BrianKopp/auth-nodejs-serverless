@@ -4,7 +4,7 @@ services:
     build:
       context: .
       dockerfile: local.Dockerfile
-    command: npm run start:local
+    command: npm run start
     volumes:
       - ./src:/app/src
     ports:

@@ -65,6 +65,11 @@ export class AccountService implements IActSvc {
     ) {}
 
     async register(reg: Registration): Promise<void> {
+        this.logger.debug('new registration', {
+            emailAddress: reg.emailAddress,
+            firstName: reg.firstName,
+            lastName: reg.lastName
+        });
         const pwHash = await hashPassword(reg.password);
         const user: User = {
             createDate: Date.now(),
@@ -91,15 +96,21 @@ export class AccountService implements IActSvc {
         const url = `${this.config.emailVerifyUrl}?token=${encodeURIComponent(verificationToken.value)}&email=${encodeURIComponent(verificationToken.emailAddress)}`;
         const emailContent = makeEmailVerificationContent(reg.firstName, url);
         await this.emailService.send(reg.emailAddress, emailContent);
+        this.logger.info('created new user', { ...user });
     }
 
     async getAccessToken(auth: NewTokenRequest): Promise<AuthSuccess> {
+        this.logger.debug('getting access token', {
+            emailAddress: auth.emailAddress,
+            hasPassword: auth.password ? true : false,
+            hasToken: auth.refreshToken ? true : false
+        });
         const user = await this.dataService.getUser(auth.emailAddress);
         if (auth.password) {
             const [salt, iterations, hashedPw] = user.saltyPassword.split(':');
-            const providedHash = await hashPassword(auth.password, salt, Number(iterations));
-            if (providedHash !== hashedPw) {
-                throw new Error('invalid password');
+            const providedHashDetails = await hashPassword(auth.password, salt, Number(iterations));
+            if (providedHashDetails.split(':')[2] !== hashedPw) {
+                throw new AuthError(AuthErrorTypes.InvalidPassword);
             }
         } else if (auth.refreshToken) {
             await this.dataService.consumeToken(auth.emailAddress, auth.refreshToken, 'refresh');
@@ -123,27 +134,31 @@ export class AccountService implements IActSvc {
         }, this.config.jwtSecret, {
             expiresIn: this.config.ttlAccessToken / 1000
         });
+        this.logger.info('successfully obtained new access token', { emailAddress: auth.emailAddress });
         return {
             refreshToken: newToken.value,
             jwt
         };
     }
 
-    logout(emailAddress: string, token: string): Promise<void> {
-        return this.dataService.consumeToken(emailAddress, token, 'refresh');
+    async logout(emailAddress: string, token: string): Promise<void> {
+        await this.dataService.consumeToken(emailAddress, token, 'refresh');
+        this.logger.info('logged out', { emailAddress });
     }
 
     async verifyEmail(emailAddress: string, token: string): Promise<void> {
-        // get token
+        this.logger.debug('verifying email address', { emailAddress });
         await this.dataService.consumeToken(emailAddress, token, 'email');
 
         // update user
         const user = await this.dataService.getUser(emailAddress);
         user.emailVerified = true;
         await this.dataService.setUser(user, false);
+        this.logger.info('user email address verified', { emailAddress });
     }
 
     async requestPasswordReset(emailAddress: string): Promise<void> {
+        this.logger.debug('submitting request to reset password', { emailAddress });
         const user = await this.dataService.getUser(emailAddress);
         if (!user.emailVerified) {
             throw new AuthError(AuthErrorTypes.EmailNotVerified);
@@ -162,9 +177,11 @@ export class AccountService implements IActSvc {
         const url = `${this.config.passwordResetUrl}?token=${encodeURIComponent(pwToken.value)}&email=${encodeURIComponent(emailAddress)}`;
         const pwResetEmailContent = makePasswordResetContent(emailAddress, url);
         await this.emailService.send(emailAddress, pwResetEmailContent);
+        this.logger.info('password reset request submitted', { emailAddress });
     }
 
     async resetPassword(emailAddress: string, password: string, token: string): Promise<void> {
+        this.logger.debug('resetting password', { emailAddress });
         // invalidate token,
         await this.dataService.consumeToken(emailAddress, token, 'password');
 
@@ -175,5 +192,6 @@ export class AccountService implements IActSvc {
 
         // send password did reset email
         await this.emailService.send(emailAddress, `<h4>Password Reset</h4><p>Hi ${user.firstName}!</p><p>Your password has just been reset. If this was not you, please reset your password or contact us.</p>`);
+        this.logger.info('password reset', { emailAddress });
     }
 }

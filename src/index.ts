@@ -2,23 +2,40 @@ import * as winston from 'winston';
 import { DynamoDB } from 'aws-sdk';
 import { makeFromEnv } from './config';
 import { DynamoDataService } from './data/dynamo-service';
+import { createTable } from './data/dynamo-functions';
 import { NoOpEmailService } from './email/noop-email.service';
 import { AccountService } from './account.service';
 import { makeApp } from './app';
 
 const config = makeFromEnv();
 const formats = [winston.format.timestamp(), winston.format.metadata()];
-if (process.env.ENVIRONMENT !== 'local') {
+if (process.env.ENVIRONMENT === 'local') {
+    formats.push(winston.format.simple());
+} else {
     formats.push(winston.format.json());
 }
 const logger = winston.createLogger({
     level: config.logLevel,
-    format: winston.format.combine(formats),
+    format: winston.format.combine(...formats),
     transports: new winston.transports.Console()
 });
 logger.debug('auth service booting');
 
-const dynamoDocClient = new DynamoDB.DocumentClient({ region: config.awsRegion });
+let dynamoDocClient: DynamoDB.DocumentClient;
+if (process.env.ENVIRONMENT === 'local') {
+    const awsConfig = {
+        region: config.awsRegion,
+        endpoint: 'localstack:4566',
+        accessKeyId: 'a',
+        secretAccessKey: 'a',
+        sslEnabled: false
+    };
+    dynamoDocClient = new DynamoDB.DocumentClient(awsConfig);
+    const dynamoClient = new DynamoDB(awsConfig);
+    createTable(dynamoClient, 'local', false).catch((err) => logger.error('error creating table', { error: err }));
+} else {
+    dynamoDocClient = new DynamoDB.DocumentClient({ region: config.awsRegion });
+}
 const dataService = new DynamoDataService(logger, dynamoDocClient, config);
 const emailService = new NoOpEmailService(logger);
 const accountService = new AccountService(config, logger, dataService, emailService);
