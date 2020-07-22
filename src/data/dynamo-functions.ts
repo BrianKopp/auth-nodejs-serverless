@@ -71,7 +71,8 @@ export const setToken = async (
     const dynamoItem = {
         ...token,
         id: `token_${token.emailAddress}_${token.value}`,
-        // TODO TTL and GSIs
+        dynamottl: Math.round(token.expiration / 1000) + 3600 * 24, // default have dynamo delete the token 1 day after it's expired
+        // TODO any GSIs?
     };
 
     await client.put({
@@ -132,6 +133,13 @@ export const createTable = async (
             AttributeName: 'id',
             AttributeType: 'S'
         }],
-        BillingMode: 'PAY_PER_REQUEST',
+        BillingMode: 'PAY_PER_REQUEST'
+    }).promise();
+    await client.updateTimeToLive({
+        TableName: tableName,
+        TimeToLiveSpecification: {
+            Enabled: true,
+            AttributeName: 'dynamottl'
+        }
     }).promise();
 };

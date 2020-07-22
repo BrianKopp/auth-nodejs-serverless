@@ -7,6 +7,7 @@ interface AuthErrorTypeInfo {
 export enum AuthErrorTypes {
     UserNotFound = 'UserNotFound',
     EmailAlreadyUsed = 'EmailAlreadyUsed',
+    EmailAlreadyVerified = 'EmailAlreadyVerified',
     EmailNotVerified = 'EmailNotVerified',
     InvalidToken = 'InvalidToken',
     InvalidPassword = 'InvalidPassword',
@@ -21,6 +22,11 @@ const authErrorTypeInfos: {[key: string]: AuthErrorTypeInfo} = {
     EmailAlreadyUsed: {
         code: 'EmailAlreadyUsed',
         message: 'Email already used',
+        statusCode: 400
+    },
+    EmailAlreadyVerified: {
+        code: 'EmailAlreadyVerified',
+        message: 'Email already verified',
         statusCode: 400
     },
     EmailNotVerified: {

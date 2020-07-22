@@ -7,6 +7,7 @@ export interface AccountService {
     getAccessToken: (auth: NewTokenRequest) => Promise<AuthSuccess>;
     logout: (emailAddress: string, token: string) => Promise<void>;
     verifyEmail: (emailAddress: string, token: string) => Promise<void>;
+    requestEmailVerification: (emailAddress: string) => Promise<void>;
     requestPasswordReset: (emailAddress: string) => Promise<void>;
     resetPassword: (emailAddress: string, password: string, token: string) => Promise<void>;
 }

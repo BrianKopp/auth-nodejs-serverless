@@ -1,5 +1,6 @@
 import * as winston from 'winston';
 import { DynamoDB } from 'aws-sdk';
+import { createServer, proxy } from 'aws-serverless-express';
 import { makeFromEnv } from './config';
 import { DynamoDataService } from './data/dynamo-service';
 import { createTable } from './data/dynamo-functions';
@@ -42,24 +43,31 @@ const accountService = new AccountService(config, logger, dataService, emailServ
 
 const app = makeApp(logger, accountService);
 
-const server = app.listen(config.port, (err) => {
-    if (err) {
-        logger.error('error starting server', { error: err });
-        process.exit(1);
-    }
-    logger.verbose(`auth service started, listening on port ${config.port}`);
-});
+if (process.env.ENVIRONMENT === 'local') {
 
-const shutdown = () => {
-    logger.verbose('received shutdown signal');
-    server.close((err) => {
+    const server = app.listen(config.port, (err) => {
         if (err) {
-            logger.error('error shutting down server', { error: err });
+            logger.error('error starting server', { error: err });
             process.exit(1);
         }
-        logger.verbose('successfully shut down auth service');
-        process.exit(0);
+        logger.verbose(`auth service started, listening on port ${config.port}`);
     });
-};
-process.on('SIGTERM', shutdown);
-process.on('SIGINT', shutdown);
+    
+    const shutdown = () => {
+        logger.verbose('received shutdown signal');
+        server.close((err) => {
+            if (err) {
+                logger.error('error shutting down server', { error: err });
+                process.exit(1);
+            }
+            logger.verbose('successfully shut down auth service');
+            process.exit(0);
+        });
+    };
+    process.on('SIGTERM', shutdown);
+    process.on('SIGINT', shutdown);
+} else {
+    // running in lambda
+    const server = createServer(app);
+    exports.handler = (event: any, context: any) => { proxy(server, event, context); };
+}

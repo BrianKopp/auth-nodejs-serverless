@@ -22,6 +22,7 @@
   },
   "homepage": "https://github.com/briankopp/auth-nodejs-serverless#readme",
   "devDependencies": {
+    "@types/aws-serverless-express": "^3.3.3",
     "@types/cors": "^2.8.6",
     "@types/express": "^4.17.7",
     "@types/hapi__joi": "^17.1.4",
@@ -40,6 +41,7 @@
   "dependencies": {
     "@hapi/joi": "^17.1.1",
     "aws-sdk": "^2.715.0",
+    "aws-serverless-express": "^3.3.8",
     "body-parser": "^1.19.0",
     "cors": "^2.8.5",
     "express": "^4.17.1",

@@ -106,6 +106,9 @@ export class AccountService implements IActSvc {
             hasToken: auth.refreshToken ? true : false
         });
         const user = await this.dataService.getUser(auth.emailAddress);
+        if (!user.emailVerified) {
+            throw new AuthError(AuthErrorTypes.EmailNotVerified);
+        }
         if (auth.password) {
             const [salt, iterations, hashedPw] = user.saltyPassword.split(':');
             const providedHashDetails = await hashPassword(auth.password, salt, Number(iterations));
@@ -148,13 +151,37 @@ export class AccountService implements IActSvc {
 
     async verifyEmail(emailAddress: string, token: string): Promise<void> {
         this.logger.debug('verifying email address', { emailAddress });
-        await this.dataService.consumeToken(emailAddress, token, 'email');
-
+        
         // update user
         const user = await this.dataService.getUser(emailAddress);
+        if (user.emailVerified) {
+            throw new AuthError(AuthErrorTypes.EmailAlreadyVerified);
+        }
         user.emailVerified = true;
         await this.dataService.setUser(user, false);
+        await this.dataService.consumeToken(emailAddress, token, 'email');
         this.logger.info('user email address verified', { emailAddress });
+    }
+
+    async requestEmailVerification(emailAddress: string): Promise<void> {
+        this.logger.debug('requesting email verification', { emailAddress });
+        const user = await this.dataService.getUser(emailAddress);
+        if (user.emailVerified) {
+            throw new AuthError(AuthErrorTypes.EmailAlreadyVerified);
+        }
+
+        const emailToken: Token = {
+            emailAddress,
+            type: 'email',
+            value: randomBytes(32).toString('base64'),
+            expiration: Date.now() + this.config.ttlEmailVerification
+        };
+
+        await this.dataService.setToken(emailToken);
+        const url = `${this.config.emailVerifyUrl}?token=${encodeURIComponent(emailToken.value)}&email=${encodeURIComponent(emailAddress)}`;
+        const emailContent = makeEmailVerificationContent(user.firstName, url);
+        await this.emailService.send(emailAddress, emailContent);
+        this.logger.info('created and sent email verification', { ...user });
     }
 
     async requestPasswordReset(emailAddress: string): Promise<void> {

@@ -24,7 +24,7 @@ export const makeApp = (logger: Logger, accountService: m.AccountService): Expre
     });
     
     
-    app.post('/auth/account-registration', validator.body(m.registrationJoiObject, { passError: true }), async (req, res, next) => {
+    app.post('/accounts', validator.body(m.registrationJoiObject, { passError: true }), async (req, res, next) => {
         const regData: m.Registration = req.body;
         try {
             await accountService.register(regData);
@@ -34,7 +34,7 @@ export const makeApp = (logger: Logger, accountService: m.AccountService): Expre
         }
     });
     
-    app.post('/auth/token', validator.body(m.authJoiObject, { passError: true }), async (req, res, next) => {
+    app.post('/accounts/tokens', validator.body(m.authJoiObject, { passError: true }), async (req, res, next) => {
         const authData: m.NewTokenRequest = req.body;
         try {
             const accessTokens = await accountService.getAccessToken(authData);
@@ -48,7 +48,7 @@ export const makeApp = (logger: Logger, accountService: m.AccountService): Expre
         email: Joi.string().email().required(),
         token: Joi.string().required()
     });
-    app.delete('/auth/token', validator.query(logoutModel, { passError: true }), async (req, res, next) => {
+    app.delete('/accounts/tokens', validator.query(logoutModel, { passError: true }), async (req, res, next) => {
         const emailAddress = req.query.email.toString();
         const refreshToken = req.query.token.toString();
         try {
@@ -63,7 +63,7 @@ export const makeApp = (logger: Logger, accountService: m.AccountService): Expre
         emailAddress: Joi.string().email().required(),
         token: Joi.string().required()
     });
-    app.post('/auth/email-verification', validator.body(emailVerificationModel, { passError: true }), async (req, res, next) => {
+    app.post('/accounts/email-verifications', validator.body(emailVerificationModel, { passError: true }), async (req, res, next) => {
         const { emailAddress, token } = req.body;
         try {
             await accountService.verifyEmail(emailAddress, token);
@@ -72,9 +72,22 @@ export const makeApp = (logger: Logger, accountService: m.AccountService): Expre
             next(err);
         }
     });
+
+    const emailVerificationRequestModel = Joi.object({
+        emailAddress: Joi.string().email().required()
+    });
+    app.post('/accounts/email-verification-requests', validator.body(emailVerificationRequestModel, { passError: true}), async (req, res, next) => {
+        const { emailAddress } = req.body;
+        try {
+            await accountService.requestEmailVerification(emailAddress);
+            res.status(201).json({ message: 'email verification sent' });
+        } catch (err) {
+            next(err);
+        }
+    });
     
     const emailOnlyVerification = Joi.object({ emailAddress: Joi.string().email().required() });
-    app.post('/auth/password-reset-request', validator.body(emailOnlyVerification, { passError: true }), async (req, res, next) => {
+    app.post('/accounts/password-reset-requests', validator.body(emailOnlyVerification, { passError: true }), async (req, res, next) => {
         const { emailAddress } = req.body;
         try {
             await accountService.requestPasswordReset(emailAddress);
@@ -89,7 +102,7 @@ export const makeApp = (logger: Logger, accountService: m.AccountService): Expre
         password: Joi.string().required(), // TODO pattern for strength
         token: Joi.string().required()
     });
-    app.post('/auth/password-reset', validator.body(passwordResetModel, { passError: true }), async (req, res, next) => {
+    app.post('/accounts/password-resets', validator.body(passwordResetModel, { passError: true }), async (req, res, next) => {
         const { emailAddress, password, token } = req.body;
         try {
             await accountService.resetPassword(emailAddress, password, token);

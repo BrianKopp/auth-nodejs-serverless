@@ -13,7 +13,7 @@ services:
       - localstack
     environment:
       ENVIRONMENT: local
-      LOG_LEVEL: debug
+      LOG_LEVEL: info
       DYNAMO_TABLENAME: local
       JWT_SECRET: shh
       WEBHOST: http://localhost:4200
